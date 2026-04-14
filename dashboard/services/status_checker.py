@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import time
 from pathlib import Path
 
 from .profile_discovery import HERMES_DIR
@@ -18,6 +20,111 @@ class StatusChecker:
             return self._hermes_dir
         return self._profiles_dir / profile_name
 
+    def _parse_soul(self, profile_dir: Path) -> str:
+        """Extract a one-line soul summary from SOUL.md."""
+        soul_file = profile_dir / "SOUL.md"
+        if not soul_file.exists():
+            return ""
+        text = soul_file.read_text()
+        # Find the section under "## 核心身份" and grab the first meaningful sentence
+        in_section = False
+        for line in text.splitlines():
+            if line.strip().startswith("## 核心身份"):
+                in_section = True
+                continue
+            if in_section:
+                # Skip empty lines and sub-headings
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("##"):
+                    break
+                if stripped.startswith("###"):
+                    continue
+                # Clean markdown: remove **, *, bold markers
+                cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", stripped)
+                cleaned = re.sub(r"\*([^*]+)\*", r"\1", cleaned)
+                # Remove leading list markers
+                cleaned = re.sub(r"^[-*]\s*", "", cleaned)
+                # Truncate to ~50 chars
+                if len(cleaned) > 60:
+                    cleaned = cleaned[:57] + "..."
+                return cleaned
+        return ""
+
+    def _count_channels(self, profile_dir: Path) -> dict:
+        """Count connected channels from channel_directory.json."""
+        ch_file = profile_dir / "channel_directory.json"
+        if not ch_file.exists():
+            return {"total": 0, "names": []}
+        try:
+            with open(ch_file) as f:
+                data = json.load(f)
+        except Exception:
+            return {"total": 0, "names": []}
+        platforms = data.get("platforms", {})
+        names = []
+        total = 0
+        for platform, channels in platforms.items():
+            if channels:
+                for ch in channels:
+                    name = ch.get("name", ch.get("id", platform))
+                    names.append(name)
+                    total += 1
+        return {"total": total, "names": names}
+
+    def _count_dir_items(self, profile_dir: Path, dirname: str) -> int:
+        """Count items in a subdirectory (skip hidden and json meta files)."""
+        d = profile_dir / dirname
+        if not d.exists():
+            return 0
+        count = 0
+        for item in d.iterdir():
+            if item.name.startswith("."):
+                continue
+            if item.is_file() and item.suffix == ".json" and item.stem == "sessions":
+                continue  # skip sessions.json meta
+            count += 1
+        return count
+
+    def _parse_uptime(self, profile_dir: Path) -> str:
+        """Calculate uptime from gateway_state.json start_time or file mtime."""
+        state_file = profile_dir / "gateway_state.json"
+        if not state_file.exists():
+            return ""
+        try:
+            with open(state_file) as f:
+                state = json.load(f)
+            start = state.get("start_time")
+            if start:
+                elapsed = time.monotonic() - start
+                if elapsed > 0:
+                    hours = int(elapsed // 3600)
+                    minutes = int((elapsed % 3600) // 60)
+                    if hours > 0:
+                        return f"{hours}h {minutes}m"
+                    return f"{minutes}m"
+            # Fallback: use file modification time
+            mtime = state_file.stat().st_mtime
+            elapsed = time.time() - mtime
+            hours = int(elapsed // 3600)
+            minutes = int((elapsed % 3600) // 60)
+            if hours > 0:
+                return f"{hours}h {minutes}m"
+            return f"{minutes}m"
+        except Exception:
+            return ""
+
+    def _parse_model_provider(self, config_file: Path) -> str:
+        """Extract model provider from config.yaml."""
+        if not config_file.exists():
+            return ""
+        for line in config_file.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("provider:"):
+                return stripped.split(":", 1)[1].strip()
+        return ""
+
     def get_status(self, profile: dict) -> dict:
         """Return status dict for a profile dict with {name, is_main}."""
         name = profile["name"]
@@ -27,16 +134,41 @@ class StatusChecker:
         state_file = profile_dir / "gateway_state.json"
         config_file = profile_dir / "config.yaml"
 
-        # Read config.yaml for model info
+        # Read config.yaml for model + provider
         model = "unknown"
+        provider = ""
         if config_file.exists():
             for line in config_file.read_text().splitlines():
                 stripped = line.strip()
-                # Main agent: "default: deepseek-chat" (top-level)
-                # Profile: "  default: qwen3.5-plus" (indented under model:)
                 if stripped.startswith("default:") and ":" in stripped:
                     model = stripped.split(":", 1)[1].strip()
-                    break
+                if stripped.startswith("provider:"):
+                    val = stripped.split(":", 1)[1].strip().strip("'\"")
+                    if val:
+                        provider = val
+
+        # Base result
+        result = {
+            "name": name if not is_main else "main",
+            "pid": None,
+            "model": model,
+            "provider": provider,
+            "running": False,
+            "state": "stopped",
+            "feishu_connected": False,
+            "active_agents": 0,
+            "is_main": is_main,
+            "soul": self._parse_soul(profile_dir),
+            "channels": {"total": 0, "names": []},
+            "sessions": 0,
+            "skills": 0,
+            "uptime": "",
+        }
+
+        # Count channels, sessions, skills (always available)
+        result["channels"] = self._count_channels(profile_dir)
+        result["sessions"] = self._count_dir_items(profile_dir, "sessions")
+        result["skills"] = self._count_dir_items(profile_dir, "skills")
 
         # Try to read gateway state
         if state_file.exists():
@@ -58,25 +190,13 @@ class StatusChecker:
 
             feishu_connected = platforms.get("feishu", {}).get("state") == "connected"
 
-            return {
-                "name": name if not is_main else "main",
-                "pid": pid,
-                "model": model,
-                "running": process_alive,
-                "state": gateway_state if process_alive else "stopped",
-                "feishu_connected": feishu_connected,
-                "active_agents": active_agents,
-                "is_main": is_main,
-            }
+            result["pid"] = pid
+            result["running"] = process_alive
+            result["state"] = gateway_state if process_alive else "stopped"
+            result["feishu_connected"] = feishu_connected
+            result["active_agents"] = active_agents
 
-        # No state file
-        return {
-            "name": name if not is_main else "main",
-            "pid": None,
-            "model": model,
-            "running": False,
-            "state": "stopped",
-            "feishu_connected": False,
-            "active_agents": 0,
-            "is_main": is_main,
-        }
+            if process_alive:
+                result["uptime"] = self._parse_uptime(profile_dir)
+
+        return result

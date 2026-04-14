@@ -399,6 +399,73 @@ body {
     color: var(--text-muted);
 }
 
+.info-provider {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+.uptime {
+    color: var(--status-running);
+    font-weight: 500;
+}
+
+/* ---------- Soul ---------- */
+.agent-soul {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    line-height: 1.4;
+    padding: 4px 0;
+    border-left: 2px solid var(--border);
+    padding-left: 8px;
+}
+
+/* ---------- Channel Chips ---------- */
+.channel-chip {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 10px;
+    color: #a5b4fc;
+    background-color: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 3px;
+    margin-right: 3px;
+}
+
+/* ---------- Stats Row ---------- */
+.agent-stats {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+.stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    background-color: rgba(59, 130, 246, 0.08);
+    border-radius: 4px;
+}
+
+.stat-pill-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.stat-pill-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 /* ---------- Agent Actions ---------- */
 .agent-actions {
     display: flex;

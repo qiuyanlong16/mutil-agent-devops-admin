@@ -1,4 +1,5 @@
 <div class="agent-card{% if agent.is_main %} agent-main{% endif %}" onclick="selectAgent('{{ agent.name }}', event)">
+    <!-- Header: name + status -->
     <div class="agent-card-header">
         <div class="agent-name-row">
             {% if agent.is_main %}
@@ -10,10 +11,30 @@
             {% if agent.running %}RUNNING{% else %}STOPPED{% endif %}
         </span>
     </div>
+
+    <!-- Soul: one-line role description -->
+    {% if agent.soul %}
+    <div class="agent-soul">{{ agent.soul }}</div>
+    {% endif %}
+
+    <!-- Details -->
     <div class="agent-info">
-        <div>Model: <span class="info-value">{{ agent.model }}</span></div>
+        <div>
+            Model: <span class="info-value">{{ agent.model }}</span>
+            {% if agent.provider %}<span class="info-provider">({{ agent.provider }})</span>{% endif %}
+        </div>
         {% if agent.pid %}
         <div>PID: <span class="info-value">{{ agent.pid }}</span></div>
+        {% endif %}
+        {% if agent.running and agent.uptime %}
+        <div>Uptime: <span class="info-value uptime">{{ agent.uptime }}</span></div>
+        {% endif %}
+        {% if agent.channels.total > 0 %}
+        <div>Channels:
+            {% for ch_name in agent.channels.names %}
+            <span class="channel-chip">{{ ch_name }}</span>
+            {% endfor %}
+        </div>
         {% endif %}
         <div>Agents Active: <span class="info-value">{{ agent.active_agents }}</span></div>
         {% if agent.feishu_connected %}
@@ -22,6 +43,26 @@
         <div class="feishu-disconnected">Feishu not connected</div>
         {% endif %}
     </div>
+
+    <!-- Stats row -->
+    {% if agent.sessions > 0 or agent.skills > 0 %}
+    <div class="agent-stats">
+        {% if agent.sessions > 0 %}
+        <div class="stat-pill">
+            <span class="stat-pill-value">{{ agent.sessions }}</span>
+            <span class="stat-pill-label">sessions</span>
+        </div>
+        {% endif %}
+        {% if agent.skills > 0 %}
+        <div class="stat-pill">
+            <span class="stat-pill-value">{{ agent.skills }}</span>
+            <span class="stat-pill-label">skills</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
     <div class="agent-actions" onclick="event.stopPropagation()">
         {% if not agent.running %}
         <button onclick="agentAction('{{ agent.name }}', 'start', this)" class="btn btn-start">
