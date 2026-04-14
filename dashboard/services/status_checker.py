@@ -25,15 +25,30 @@ class StatusChecker:
         soul_file = profile_dir / "SOUL.md"
         if not soul_file.exists():
             return ""
-        text = soul_file.read_text()
-        # Find the section under "## 核心身份" and grab the first meaningful sentence
+        text = soul_file.read_text(errors="replace")
+        # Look for identity section: "## 核心身份", "## 身份", "## Core Identity", etc.
+        soul_patterns = ["## 核心身份", "## 身份", "## Core Identity", "## Role", "## 角色"]
+        target_section = None
+        for pattern in soul_patterns:
+            if pattern in text:
+                target_section = pattern
+                break
+        if not target_section:
+            # Fallback: use the first H2 section
+            for line in text.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("## ") and not stripped.startswith("## SOUL"):
+                    target_section = stripped.rstrip()
+                    break
+        if not target_section:
+            return ""
+
         in_section = False
         for line in text.splitlines():
-            if line.strip().startswith("## 核心身份"):
+            if line.strip().startswith(target_section):
                 in_section = True
                 continue
             if in_section:
-                # Skip empty lines and sub-headings
                 stripped = line.strip()
                 if not stripped:
                     continue
@@ -41,12 +56,10 @@ class StatusChecker:
                     break
                 if stripped.startswith("###"):
                     continue
-                # Clean markdown: remove **, *, bold markers
                 cleaned = re.sub(r"\*\*([^*]+)\*\*", r"\1", stripped)
                 cleaned = re.sub(r"\*([^*]+)\*", r"\1", cleaned)
-                # Remove leading list markers
                 cleaned = re.sub(r"^[-*]\s*", "", cleaned)
-                # Truncate to ~50 chars
+                cleaned = re.sub(r"^[\d]+[\.\)]\s*", "", cleaned)
                 if len(cleaned) > 60:
                     cleaned = cleaned[:57] + "..."
                 return cleaned
