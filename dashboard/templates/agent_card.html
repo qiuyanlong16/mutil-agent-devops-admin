@@ -19,18 +19,18 @@
     </div>
     <div class="agent-actions" onclick="event.stopPropagation()">
         {% if not agent.running %}
-        <button onclick="agentAction('{{ agent.name }}', 'start')" class="btn btn-start">
+        <button onclick="agentAction('{{ agent.name }}', 'start', this)" class="btn btn-start">
             Start
         </button>
         {% else %}
-        <button onclick="agentAction('{{ agent.name }}', 'stop')" class="btn btn-stop">
+        <button onclick="agentAction('{{ agent.name }}', 'stop', this)" class="btn btn-stop">
             Stop
         </button>
-        <button onclick="agentAction('{{ agent.name }}', 'restart')" class="btn btn-restart">
+        <button onclick="agentAction('{{ agent.name }}', 'restart', this)" class="btn btn-restart">
             Restart
         </button>
         {% endif %}
-        <button onclick="agentAction('{{ agent.name }}', 'open-terminal')" class="btn btn-terminal">
+        <button onclick="agentAction('{{ agent.name }}', 'open-terminal', this)" class="btn btn-terminal">
             Terminal
         </button>
     </div>

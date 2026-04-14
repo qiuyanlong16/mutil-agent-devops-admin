@@ -7,7 +7,11 @@ let pollTimer = null;
    Agent Actions — vanilla fetch (replaces HTMX hx-post)
    ============================================================ */
 
-async function agentAction(name, action) {
+async function agentAction(name, action, btnEl) {
+    const originalText = btnEl.textContent;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<span class="spinner"></span>';
+
     try {
         const resp = await fetch(`/api/agents/${name}/${action}`, {
             method: 'POST',
@@ -15,10 +19,15 @@ async function agentAction(name, action) {
         if (resp.ok) {
             refreshAgentList();
         } else {
+            // Server error — restore button so user can retry
+            btnEl.disabled = false;
+            btnEl.textContent = originalText;
             const data = await resp.json().catch(() => ({}));
             console.error(`Action ${action} failed for ${name}:`, data);
         }
     } catch (err) {
+        btnEl.disabled = false;
+        btnEl.textContent = originalText;
         console.error(`Action ${action} failed for ${name}:`, err);
     }
 }
