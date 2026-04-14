@@ -56,15 +56,15 @@ function selectAgent(name, evt) {
    ============================================================ */
 
 function switchTab(tabId) {
-    // tabId is like "log-gateway.log" or "detail-scheduler-pusher-cron"
-    const parts = tabId.split('-');
-    if (parts[0] === 'log') {
-        const logType = parts.slice(1).join('-');
+    if (tabId.startsWith('log-')) {
+        const logType = tabId.slice(4);
         activateLogTab(logType);
-    } else if (parts[0] === 'detail') {
-        const agent = parts[1];
-        const type = parts[2];
-        activateDetailTab(agent, type);
+    } else if (tabId.startsWith('detail-')) {
+        // Look up in tracked tabs — can't split by '-' because agent names contain hyphens
+        const tab = activeDetailTabs.find(t => t.id === tabId);
+        if (tab) {
+            activateDetailTab(tab.agent, tab.type);
+        }
     }
 }
 
