@@ -1,57 +1,80 @@
 let currentAgent = null;
 let currentLogType = "gateway.log";
 let eventSource = null;
+let pollTimer = null;
 
-function selectAgent(name) {
-    // Remove highlight from all cards
+/* ============================================================
+   Agent Actions — vanilla fetch (replaces HTMX hx-post)
+   ============================================================ */
+
+async function agentAction(name, action) {
+    try {
+        const resp = await fetch(`/api/agents/${name}/${action}`, {
+            method: 'POST',
+        });
+        if (resp.ok) {
+            refreshAgentList();
+        } else {
+            const data = await resp.json().catch(() => ({}));
+            console.error(`Action ${action} failed for ${name}:`, data);
+        }
+    } catch (err) {
+        console.error(`Action ${action} failed for ${name}:`, err);
+    }
+}
+
+/* ============================================================
+   Agent Selection
+   ============================================================ */
+
+function selectAgent(name, evt) {
     document.querySelectorAll('.agent-card').forEach(card => {
-        card.classList.remove('border-blue-500', 'ring-1', 'ring-blue-500');
+        card.classList.remove('selected');
     });
 
-    // Highlight selected card
-    event.currentTarget.classList.add('border-blue-500', 'ring-1', 'ring-blue-500');
+    evt.currentTarget.classList.add('selected');
 
-    // Show log controls
-    document.getElementById('log-controls').classList.remove('hidden');
-    document.getElementById('log-controls').classList.add('flex');
+    const logControls = document.getElementById('log-controls');
+    logControls.classList.remove('hidden');
     document.getElementById('log-agent-name').textContent = name;
 
-    // Switch SSE stream
     currentAgent = name;
     startLogStream();
 }
 
+/* ============================================================
+   Log Tab Switching
+   ============================================================ */
+
 function selectLogTab(logType) {
     currentLogType = logType;
 
-    // Update tab styles
     document.querySelectorAll('.log-tab').forEach(tab => {
         if (tab.dataset.logType === logType) {
-            tab.classList.remove('bg-gray-800', 'text-gray-400');
-            tab.classList.add('bg-blue-600', 'text-white');
+            tab.classList.add('active');
         } else {
-            tab.classList.remove('bg-blue-600', 'text-white');
-            tab.classList.add('bg-gray-800', 'text-gray-400');
+            tab.classList.remove('active');
         }
     });
 
-    // Restart SSE with new log type
     startLogStream();
 }
+
+/* ============================================================
+   SSE Log Streaming
+   ============================================================ */
 
 function startLogStream() {
     if (!currentAgent) return;
 
-    // Close existing connection
     if (eventSource) {
         eventSource.close();
     }
 
-    // Clear log output
     const output = document.getElementById('log-output');
     output.innerHTML = '';
 
-    // Load recent lines first
+    // Load recent lines
     fetch(`/api/logs/${currentAgent}/recent?log_type=${currentLogType}`)
         .then(r => r.json())
         .then(data => {
@@ -62,7 +85,7 @@ function startLogStream() {
         })
         .catch(() => {});
 
-    // Open SSE connection
+    // SSE
     eventSource = new EventSource(
         `/api/logs/${currentAgent}/stream?log_type=${currentLogType}`
     );
@@ -70,16 +93,14 @@ function startLogStream() {
     eventSource.addEventListener('log', (e) => {
         const output = document.getElementById('log-output');
         const div = document.createElement('div');
-        div.className = 'log-line whitespace-pre';
+        div.className = 'log-line';
         div.textContent = e.data;
         output.appendChild(div);
 
-        // Auto-scroll if near bottom
         if (output.scrollHeight - output.scrollTop - output.clientHeight < 100) {
             output.scrollTop = output.scrollHeight;
         }
 
-        // Limit displayed lines to prevent memory issues
         while (output.children.length > 2000) {
             output.removeChild(output.firstChild);
         }
@@ -88,7 +109,7 @@ function startLogStream() {
     eventSource.addEventListener('error', (e) => {
         const output = document.getElementById('log-output');
         const div = document.createElement('div');
-        div.className = 'text-red-400';
+        div.style.color = '#f87171';
         div.textContent = e.data;
         output.appendChild(div);
     });
@@ -100,7 +121,7 @@ function clearLogs() {
 
 function formatLogLines(text) {
     return text.split('\n').map(line => {
-        return `<div class="log-line whitespace-pre">${escapeHtml(line)}</div>`;
+        return `<div class="log-line">${escapeHtml(line)}</div>`;
     }).join('');
 }
 
@@ -110,24 +131,44 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function refreshAgentList() {
-    // Trigger HTMX to refresh agent list immediately
-    const agentList = document.getElementById('agent-list');
-    if (agentList) {
-        htmx.trigger(agentList, 'htmx:poll');
+/* ============================================================
+   Agent List Polling (replaces HTMX hx-get every 5s)
+   ============================================================ */
+
+async function refreshAgentList() {
+    try {
+        const resp = await fetch('/api/agents');
+        const html = await resp.text();
+        const agentList = document.getElementById('agent-list');
+        if (agentList) {
+            agentList.innerHTML = html;
+
+            // Re-highlight selected agent if present
+            if (currentAgent) {
+                const cards = agentList.querySelectorAll('.agent-card');
+                cards.forEach(card => {
+                    const onclick = card.getAttribute('onclick');
+                    if (onclick && onclick.includes(`'${currentAgent}'`)) {
+                        card.classList.add('selected');
+                    }
+                });
+            }
+        }
+    } catch (err) {
+        console.error('Failed to refresh agent list:', err);
     }
 }
 
-// Re-select agent card after HTMX swap (polling replaces innerHTML)
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-    if (evt.detail.target.id === 'agent-list' && currentAgent) {
-        // Re-highlight the currently selected card
-        const cards = document.querySelectorAll('.agent-card');
-        cards.forEach(card => {
-            const onclick = card.getAttribute('onclick');
-            if (onclick && onclick.includes(`'${currentAgent}'`)) {
-                card.classList.add('border-blue-500', 'ring-1', 'ring-blue-500');
-            }
-        });
-    }
-});
+// Start 5-second polling
+function startPolling() {
+    pollTimer = setInterval(refreshAgentList, 5000);
+}
+
+// Update stats in header after refresh
+function updateStats() {
+    // Stats are rendered server-side; they get refreshed on full page reload
+    // The poll refreshes only agent cards, so stats stay in sync on initial render
+}
+
+// Boot
+startPolling();

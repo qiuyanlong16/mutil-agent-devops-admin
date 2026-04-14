@@ -1,49 +1,644 @@
-/* Custom styles for Hermes Dashboard */
+/* ============================================================
+   Hermes Agents — Operations Dashboard Styles
+   Pure CSS, no frameworks, no CDN dependencies
+   Dark theme, large-screen adaptive ops panel
+   ============================================================ */
+
+/* ---------- Variables ---------- */
+:root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #0f1629;
+    --bg-card: #141c32;
+    --bg-card-hover: #1a2540;
+    --border: #1e2d4a;
+    --border-active: #2563eb;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --status-running: #10b981;
+    --status-stopped: #ef4444;
+    --status-warning: #f59e0b;
+}
+
+/* ---------- Reset & Base ---------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, 'Courier New', monospace;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2a3a5c;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3a4a6c;
+}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+
+#dashboard {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ---------- Header ---------- */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    min-height: 56px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    color: var(--accent);
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.logo-text {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    color: var(--text-primary);
+}
+
+.header-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    font-size: 11px;
+    color: var(--status-running);
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--status-running);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.stat-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.stat-running {
+    color: var(--status-running);
+}
+
+.stat-stopped {
+    color: var(--status-stopped);
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+}
+
+.stat-divider {
+    width: 1px;
+    height: 32px;
+    background-color: var(--border);
+}
+
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: var(--accent);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    letter-spacing: 0.025em;
+}
+
+.btn-refresh:hover {
+    background-color: var(--accent-hover);
+}
+
+/* ---------- Main Content ---------- */
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ---------- Left Panel ---------- */
+.panel-left {
+    width: 320px;
+    min-width: 280px;
+    max-width: 400px;
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+.panel-header span:first-child {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+}
+
+.panel-badge {
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--status-running);
+    border-radius: 9999px;
+}
+
+.agent-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ---------- Agent Card ---------- */
+.agent-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.agent-card:hover {
+    background-color: var(--bg-card-hover);
+    border-color: #2a3f6a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.agent-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+.agent-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.agent-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.025em;
+}
+
+/* ---------- Status Badge ---------- */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border-radius: 9999px;
+}
+
+.status-badge::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+.status-running {
+    color: #34d399;
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.status-running::before {
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+}
+
+.status-stopped {
+    color: #f87171;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* ---------- Agent Info ---------- */
+.agent-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-value {
+    color: var(--text-primary);
+}
+
+.feishu-connected {
+    color: #34d399;
+}
+
+.feishu-disconnected {
+    color: var(--text-muted);
+}
+
+/* ---------- Agent Actions ---------- */
+.agent-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.btn {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: inherit;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+    letter-spacing: 0.025em;
+}
+
+.btn:hover {
+    opacity: 0.85;
+}
+
+.btn:active {
+    opacity: 0.7;
+}
+
+.btn-start {
+    background-color: #059669;
+    color: #d1fae5;
+}
+
+.btn-start:hover {
+    background-color: #047857;
+}
+
+.btn-stop {
+    background-color: #d97706;
+    color: #fef3c7;
+}
+
+.btn-stop:hover {
+    background-color: #b45309;
+}
+
+.btn-restart {
+    background-color: #2563eb;
+    color: #dbeafe;
+}
+
+.btn-restart:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-terminal {
+    background-color: #334155;
+    color: #cbd5e1;
+}
+
+.btn-terminal:hover {
+    background-color: #475569;
+}
+
+/* ---------- Right Panel: Log Viewer ---------- */
+.panel-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-primary);
+    overflow: hidden;
+    min-width: 0;
+}
+
+.log-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.log-controls.hidden {
+    display: none;
+}
+
+.log-agent-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+.log-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.log-tab {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-family: inherit;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background-color: var(--bg-card);
+    color: var(--text-secondary);
+}
+
+.log-tab:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-card-hover);
+}
+
+.log-tab.active {
+    background-color: var(--accent);
+    color: #ffffff;
+}
+
+.log-controls-spacer {
+    flex: 1;
+}
+
+.btn-clear {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-family: inherit;
+    background-color: var(--bg-card);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-clear:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-card-hover);
+}
+
+/* ---------- Log Output ---------- */
+.log-wrapper {
+    flex: 1;
+    padding: 16px;
+    overflow: hidden;
+}
+
+.log-output {
+    height: 100%;
+    overflow: auto;
+    font-size: 12px;
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    padding: 16px;
+    scroll-behavior: smooth;
+}
 
 .log-line {
-    line-height: 1.5;
+    line-height: 1.6;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(30, 45, 74, 0.3);
 }
 
 .log-line:hover {
     background-color: rgba(59, 130, 246, 0.05);
 }
 
-/* Smooth scroll for log output */
-#log-output {
-    scroll-behavior: smooth;
+/* ---------- Log Placeholder ---------- */
+.log-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
 }
 
-/* Card hover effect */
-.agent-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.3;
 }
 
-/* Status badge pulse for running agents */
-.status-badge.bg-green-900 {
-    animation: pulse-green 2s ease-in-out infinite;
+.placeholder-text {
+    font-size: 14px;
+    letter-spacing: 0.1em;
 }
 
-@keyframes pulse-green {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+/* ---------- Utility ---------- */
+.hidden {
+    display: none !important;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* ---------- Responsive Adjustments ---------- */
+@media (max-width: 1024px) {
+    .header {
+        flex-direction: column;
+        gap: 12px;
+        padding: 10px 16px;
+    }
+
+    .header-left, .header-right {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .panel-left {
+        width: 260px;
+        min-width: 200px;
+    }
+
+    .agent-actions {
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        min-width: calc(50% - 3px);
+    }
 }
 
-::-webkit-scrollbar-track {
-    background: #1a1a2e;
+@media (min-width: 1920px) {
+    .agent-card {
+        padding: 16px;
+    }
+
+    .agent-name {
+        font-size: 16px;
+    }
+
+    .agent-info {
+        font-size: 14px;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .log-output {
+        font-size: 14px;
+    }
+
+    .stat-value {
+        font-size: 26px;
+    }
+
+    .logo-text {
+        font-size: 18px;
+    }
 }
 
-::-webkit-scrollbar-thumb {
-    background: #4a4a6a;
-    border-radius: 4px;
-}
+@media (min-width: 2560px) {
+    .agent-card {
+        padding: 20px;
+    }
 
-::-webkit-scrollbar-thumb:hover {
-    background: #6a6a8a;
+    .agent-name {
+        font-size: 18px;
+    }
+
+    .agent-info {
+        font-size: 15px;
+    }
+
+    .btn {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    .log-output {
+        font-size: 15px;
+    }
+
+    .stat-value {
+        font-size: 30px;
+    }
 }

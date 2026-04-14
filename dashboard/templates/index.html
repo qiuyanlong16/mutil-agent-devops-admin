@@ -3,57 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hermes Agents Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <title>Hermes Agents — Operations Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="bg-gray-950 text-gray-100 h-screen overflow-hidden">
-    <!-- Header -->
-    <header class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center justify-between">
-        <h1 class="text-lg font-semibold text-white">Hermes Agents Dashboard</h1>
-        <div class="flex items-center gap-3">
-            <span id="agent-count" class="text-sm text-gray-400">{{ agents|length }} agents</span>
-            <button hx-get="/api/agents" hx-target="#agent-list" hx-swap="innerHTML"
-                    class="px-3 py-1 text-sm bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 transition">
-                Refresh
-            </button>
-        </div>
-    </header>
-
-    <div class="flex h-[calc(100vh-52px)]">
-        <!-- Sidebar: Agent Cards -->
-        <aside class="w-80 bg-gray-900 border-r border-gray-800 overflow-y-auto p-4">
-            <div id="agent-list" hx-get="/api/agents" hx-trigger="every 3s" hx-swap="innerHTML">
-                {% for agent in agents %}
-                {% include "agent_card.html" %}
-                {% endfor %}
+<body>
+    <div id="dashboard">
+        <!-- Header Bar -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">&#x2B21;</span>
+                    <span class="logo-text">HERMES AGENTS</span>
+                </div>
+                <span class="header-sub">MULTI-AGENT OPERATIONS</span>
+                <span class="live-indicator">
+                    <span class="live-dot"></span> LIVE
+                </span>
             </div>
-        </aside>
 
-        <!-- Main: Log Panel -->
-        <main class="flex-1 flex flex-col overflow-hidden">
-            <!-- Log Controls -->
-            <div id="log-controls" class="hidden bg-gray-900 border-b border-gray-800 px-4 py-2 flex items-center gap-3">
-                <span id="log-agent-name" class="text-sm font-medium text-white"></span>
-                <div class="flex gap-1" id="log-tabs">
-                    {% for lt in log_types %}
-                    <button onclick="selectLogTab('{{ lt }}')"
-                            class="log-tab px-3 py-1 text-xs rounded transition
-                                   {% if lt == 'gateway.log' %}bg-blue-600 text-white{% else %}bg-gray-800 text-gray-400 hover:bg-gray-700{% endif %}"
-                            data-log-type="{{ lt }}">
-                        {{ lt }}
-                    </button>
+            <div class="header-right">
+                <div class="stat-group">
+                    <div class="stat-item">
+                        <div class="stat-value" id="agent-count">{{ agents|length }}</div>
+                        <div class="stat-label">TOTAL</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-value stat-running">{{ agents | selectattr('running') | list | length }}</div>
+                        <div class="stat-label">RUNNING</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-value stat-stopped">{{ agents | selectattr('running', 'false') | list | length }}</div>
+                        <div class="stat-label">STOPPED</div>
+                    </div>
+                </div>
+                <button class="btn-refresh" onclick="refreshAgentList()">
+                    <span>&#x27F3;</span> REFRESH
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel: Agent List -->
+            <aside class="panel-left">
+                <div class="panel-header">
+                    <span>AGENT INSTANCES</span>
+                    <span class="panel-badge">ACTIVE</span>
+                </div>
+                <div id="agent-list" class="agent-list">
+                    {% for agent in agents %}
+                    {% include "agent_card.html" %}
                     {% endfor %}
                 </div>
-                <button onclick="clearLogs()" class="ml-auto text-xs text-gray-500 hover:text-gray-300">Clear</button>
-            </div>
+            </aside>
 
-            <!-- Log Output -->
-            <div id="log-output" class="flex-1 overflow-auto p-4 font-mono text-sm text-gray-300 bg-gray-950">
-                <div class="text-gray-600 italic">Select an agent to view logs...</div>
-            </div>
-        </main>
+            <!-- Right Panel: Log Viewer -->
+            <main class="panel-right">
+                <div id="log-controls" class="log-controls hidden">
+                    <span id="log-agent-name" class="log-agent-name"></span>
+                    <div class="log-tabs" id="log-tabs">
+                        {% for lt in log_types %}
+                        <button onclick="selectLogTab('{{ lt }}')"
+                                class="log-tab {% if lt == 'gateway.log' %}active{% endif %}"
+                                data-log-type="{{ lt }}">
+                            {{ lt }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <div class="log-controls-spacer"></div>
+                    <button onclick="clearLogs()" class="btn-clear">CLEAR</button>
+                </div>
+                <div class="log-wrapper">
+                    <div id="log-output" class="log-output">
+                        <div class="log-placeholder">
+                            <div class="placeholder-icon">&#x2B21;</div>
+                            <div class="placeholder-text">SELECT AN AGENT TO VIEW LOGS</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>
