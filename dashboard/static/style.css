@@ -412,9 +412,8 @@ body {
 
 /* ---------- Soul ---------- */
 .agent-soul {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--text-muted);
-    font-style: italic;
     line-height: 1.4;
     padding: 4px 0;
     border-left: 2px solid var(--border);
