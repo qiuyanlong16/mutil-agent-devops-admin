@@ -2,6 +2,10 @@
 
 A lightweight web operations panel for managing multiple isolated [Hermes](https://github.com/hermes) agent profiles.
 
+<img width="1561" height="1085" alt="图片" src="https://github.com/user-attachments/assets/3a61c7ce-cd00-48c9-a11d-cb761a6a6200" />
+
+
+
 ## Features
 
 - **Real-time monitoring** — live status (running/stopped), PID, model info, and active agent count for each profile
