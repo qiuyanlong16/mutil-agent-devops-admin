@@ -2,7 +2,8 @@
 
 A lightweight web operations panel for managing multiple isolated [Hermes](https://github.com/hermes) agent profiles.
 
-<img width="1344" height="292" alt="图片" src="https://github.com/user-attachments/assets/f5f70732-8ed3-4e1c-a54f-037a2fd04554" />
+<img width="1561" height="1085" alt="图片" src="https://github.com/user-attachments/assets/3a61c7ce-cd00-48c9-a11d-cb761a6a6200" />
+
 
 
 ## Features
