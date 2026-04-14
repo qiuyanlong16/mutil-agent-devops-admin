@@ -65,6 +65,19 @@ class StatusChecker:
                 return cleaned
         return ""
 
+    def _readable_channel_name(self, name: str, ch_type: str) -> str:
+        """Convert an opaque channel ID to a readable display name."""
+        if name and not name.startswith("oc_") and "@" not in name:
+            return name  # already readable
+        # Fallback based on type
+        if ch_type == "dm":
+            return "私聊"
+        if ch_type == "group":
+            # Truncate the ID to a short suffix
+            short_id = name[-6:] if name and not name.startswith("oc_") else name.replace("oc_", "")[-6:]
+            return f"群聊#{short_id}"
+        return name
+
     def _count_channels(self, profile_dir: Path) -> dict:
         """Count connected channels from channel_directory.json."""
         ch_file = profile_dir / "channel_directory.json"
@@ -81,8 +94,10 @@ class StatusChecker:
         for platform, channels in platforms.items():
             if channels:
                 for ch in channels:
-                    name = ch.get("name", ch.get("id", platform))
-                    names.append(name)
+                    name = ch.get("name", "")
+                    ch_type = ch.get("type", "")
+                    display = self._readable_channel_name(name, ch_type)
+                    names.append(display)
                     total += 1
         return {"total": total, "names": names}
 
