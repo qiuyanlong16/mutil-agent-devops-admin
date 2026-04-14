@@ -214,15 +214,84 @@ class StatusChecker:
         result.sort(key=lambda s: s["id"], reverse=True)
         return result
 
-    def _list_skills(self, profile_dir: Path) -> list[str]:
-        """List skill directory names."""
+    def _list_skills(self, profile_dir: Path) -> list[dict]:
+        """List skills with metadata from SKILL.md frontmatter.
+
+        Handles two-level structure:
+          skills/github/github-auth/SKILL.md  (category/skill)
+          skills/apple/SKILL.md               (leaf skill)
+        """
         skills_dir = profile_dir / "skills"
         if not skills_dir.exists():
             return []
-        return sorted(
-            d.name for d in skills_dir.iterdir()
-            if d.is_dir() and not d.name.startswith(".")
-        )
+        result = []
+
+        for top_dir in sorted(skills_dir.iterdir()):
+            if not top_dir.is_dir() or top_dir.name.startswith("."):
+                continue
+
+            # Check if this directory has a SKILL.md (leaf skill)
+            leaf_skill = top_dir / "SKILL.md"
+            if leaf_skill.exists():
+                skill_data = self._parse_skill_file(leaf_skill)
+                skill_data["name"] = top_dir.name
+                skill_data["category"] = ""
+                skill_data["path"] = str(top_dir.relative_to(profile_dir))
+                result.append(skill_data)
+                continue
+
+            # Otherwise, sub-directories are actual skills
+            for sub_dir in sorted(top_dir.iterdir()):
+                if not sub_dir.is_dir() or sub_dir.name.startswith("."):
+                    continue
+                skill_file = sub_dir / "SKILL.md"
+                if not skill_file.exists():
+                    continue
+                skill_data = self._parse_skill_file(skill_file)
+                skill_data["name"] = sub_dir.name
+                skill_data["category"] = top_dir.name
+                skill_data["path"] = str(sub_dir.relative_to(profile_dir))
+                result.append(skill_data)
+
+        result.sort(key=lambda s: (s["category"], s["name"]))
+        return result
+
+    def _parse_skill_file(self, skill_file: Path) -> dict:
+        """Parse SKILL.md YAML frontmatter."""
+        name = ""
+        description = ""
+        tags = []
+        version = ""
+        author = ""
+        try:
+            text = skill_file.read_text(errors="replace")
+            if text.startswith("---"):
+                parts = text.split("---", 2)
+                if len(parts) >= 3:
+                    yaml_text = parts[1].strip()
+                    for line in yaml_text.splitlines():
+                        stripped = line.strip()
+                        if stripped.startswith("name:"):
+                            name = stripped.split(":", 1)[1].strip()
+                        elif stripped.startswith("description:"):
+                            description = stripped.split(":", 1)[1].strip()
+                        elif stripped.startswith("version:"):
+                            version = stripped.split(":", 1)[1].strip()
+                        elif stripped.startswith("author:"):
+                            author = stripped.split(":", 1)[1].strip()
+                        elif stripped.startswith("tags:"):
+                            tag_str = stripped.split(":", 1)[1].strip()
+                            if tag_str.startswith("[") and tag_str.endswith("]"):
+                                tags = [t.strip().strip("'\"") for t in tag_str[1:-1].split(",")]
+        except Exception:
+            pass
+        return {
+            "name": name,
+            "description": description,
+            "tags": tags,
+            "version": version,
+            "author": author,
+        }
 
     def _parse_uptime(self, profile_dir: Path) -> str:
         """Calculate uptime from gateway_state.json start_time or file mtime."""

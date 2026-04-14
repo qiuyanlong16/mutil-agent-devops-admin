@@ -245,13 +245,73 @@ function renderSkillsList(skills, agent) {
     if (!skills || skills.length === 0) {
         return '<div class="detail-empty">No skills found</div>';
     }
-    let html = `<div class="detail-header">${agent} — Skills (${skills.length})</div>`;
-    html += '<div class="detail-list">';
-    for (const name of skills) {
-        html += `<div class="detail-item">
-            <span class="detail-item-name">${escapeHtml(name)}</span>
-        </div>`;
+
+    // Group by category
+    const categories = {};
+    for (const skill of skills) {
+        const cat = skill.category || 'other';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(skill);
     }
+
+    // Category display labels
+    const catLabels = {
+        'social-media': 'Social Media',
+        'github': 'GitHub',
+        'google': 'Google',
+        'productivity': 'Productivity',
+        'research': 'Research',
+        'creative': 'Creative',
+        'data-science': 'Data Science',
+        'software-development': 'Software Development',
+        'autonomous-ai-agents': 'Autonomous AI',
+        'mlops': 'MLOps',
+        'devops': 'DevOps',
+        'diagramming': 'Diagramming',
+    };
+
+    let html = `<div class="detail-header">${agent} — Skills (${skills.length})</div>`;
+    html += '<div class="skills-container">';
+
+    for (const [cat, catSkills] of Object.entries(categories).sort()) {
+        const label = catLabels[cat] || cat;
+        html += `<div class="skills-category">`;
+        html += `<div class="skills-category-title">${escapeHtml(label)} (${catSkills.length})</div>`;
+        html += '<div class="skills-grid">';
+
+        for (const skill of catSkills) {
+            html += `<div class="skill-card">`;
+            // Skill header
+            html += `<div class="skill-card-header">`;
+            html += `<span class="skill-card-name">${escapeHtml(skill.name)}</span>`;
+            if (skill.version) {
+                html += `<span class="skill-card-version">${escapeHtml(skill.version)}</span>`;
+            }
+            html += `</div>`;
+            // Description
+            if (skill.description) {
+                html += `<div class="skill-card-desc">${escapeHtml(skill.description)}</div>`;
+            }
+            // Tags
+            if (skill.tags && skill.tags.length > 0) {
+                html += '<div class="skill-card-tags">';
+                for (const tag of skill.tags.slice(0, 5)) {
+                    html += `<span class="skill-tag">${escapeHtml(tag)}</span>`;
+                }
+                html += '</div>';
+            }
+            // Footer: author
+            if (skill.author) {
+                html += `<div class="skill-card-footer">`;
+                html += `<span class="skill-card-author">by ${escapeHtml(skill.author)}</span>`;
+                html += `</div>`;
+            }
+            html += '</div>';
+        }
+
+        html += '</div></div>';
+    }
+
     html += '</div>';
     return html;
 }
