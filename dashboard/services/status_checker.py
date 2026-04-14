@@ -152,6 +152,8 @@ class StatusChecker:
             return []
         result = []
         for job in data.get("jobs", []):
+            last_run = job.get("last_run_at", "")
+            created_at = job.get("created_at", "")
             result.append({
                 "id": job.get("id", ""),
                 "name": job.get("name", "untitled"),
@@ -159,6 +161,14 @@ class StatusChecker:
                 "enabled": job.get("enabled", False),
                 "state": job.get("state", ""),
                 "next_run": job.get("next_run_at", ""),
+                "last_run": last_run,
+                "last_status": job.get("last_status", ""),
+                "last_error": job.get("last_error", ""),
+                "created_at": created_at,
+                "model": job.get("model", ""),
+                "provider": job.get("provider", ""),
+                "repeat_times": job.get("repeat", {}).get("times"),
+                "repeat_completed": job.get("repeat", {}).get("completed", 0),
             })
         return result
 

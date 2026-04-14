@@ -187,13 +187,37 @@ function renderCronList(jobs, agent) {
     html += '<div class="detail-list">';
     for (const job of jobs) {
         const enabledClass = job.enabled ? '' : ' disabled';
-        const stateLabel = job.state || '';
-        const nextRun = job.next_run ? ` · next: ${job.next_run.split('T')[1]?.substring(0, 5) || job.next_run}` : '';
-        html += `<div class="detail-item${enabledClass}">
-            <span class="detail-item-name">${escapeHtml(job.name)}</span>
-            <span class="detail-item-meta">${escapeHtml(job.schedule)}${nextRun}</span>
-            <span class="detail-item-state">${stateLabel}</span>
-        </div>`;
+        // Format time: extract HH:MM from ISO string
+        const fmtTime = (iso) => iso ? iso.split('T')[1]?.substring(0, 5) || iso : '—';
+        const fmtDate = (iso) => iso ? iso.split('T')[0] : '—';
+
+        html += `<div class="detail-item${enabledClass}">`;
+        html += `<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0">`;
+        // Row 1: name + state badge
+        html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">`;
+        html += `<span class="detail-item-name" title="${escapeHtml(job.id)}">${escapeHtml(job.name)}</span>`;
+        html += `<span class="detail-item-state">${job.state || '—'}</span>`;
+        html += `</div>`;
+        // Row 2: schedule
+        html += `<div style="display:flex;gap:16px;flex-wrap:wrap">`;
+        html += `<span class="detail-item-meta">Schedule: <code>${escapeHtml(job.schedule || '—')}</code></span>`;
+        // Row 3: timing info
+        html += `<span class="detail-item-meta">Next: ${fmtDate(job.next_run)} ${fmtTime(job.next_run)}</span>`;
+        if (job.last_run) {
+            html += `<span class="detail-item-meta">Last: ${fmtDate(job.last_run)} ${fmtTime(job.last_run)} ${job.last_status ? `(${job.last_status})` : ''}</span>`;
+        }
+        // Row 4: model + repeat info
+        const metaParts = [];
+        if (job.model) metaParts.push(job.model);
+        if (job.repeat_times !== null) metaParts.push(`repeat: ${job.repeat_completed}/${job.repeat_times}`);
+        if (metaParts.length > 0) {
+            html += `<span class="detail-item-meta">${metaParts.join(' · ')}</span>`;
+        }
+        if (job.last_error) {
+            html += `<span style="color:#f87171;font-size:10px" title="${escapeHtml(job.last_error)}">Error: ${escapeHtml(job.last_error.substring(0, 80))}</span>`;
+        }
+        html += `</div>`;
+        html += `</div></div>`;
     }
     html += '</div>';
     return html;
