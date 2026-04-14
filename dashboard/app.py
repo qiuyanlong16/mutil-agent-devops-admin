@@ -22,13 +22,20 @@ app = FastAPI(title="Hermes Agents Dashboard", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(DASHBOARD_DIR / "static")), name="static")
 
 
+# ── Helpers ──────────────────────────────────────────────────────────────
+
+def _get_agents():
+    """Get agent list with status, including main agent."""
+    profiles = discovery.list_profiles()
+    return [status.get_status(p) for p in profiles]
+
+
 # ── Pages ──────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Main dashboard page."""
-    profiles = discovery.list_profiles()
-    agents = [status.get_status(p) for p in profiles]
+    agents = _get_agents()
     return templates.TemplateResponse(request, "index.html", {
         "agents": agents,
         "log_types": VALID_LOG_TYPES,
@@ -37,9 +44,8 @@ async def index(request: Request):
 
 @app.get("/api/agents")
 async def list_agents(request: Request):
-    """GET all agents with status (for HTMX polling refresh)."""
-    profiles = discovery.list_profiles()
-    agents = [status.get_status(p) for p in profiles]
+    """GET all agents with status (for polling refresh)."""
+    agents = _get_agents()
     return templates.TemplateResponse(request, "agent_cards.html", {
         "agents": agents,
         "log_types": VALID_LOG_TYPES,
@@ -50,37 +56,45 @@ async def list_agents(request: Request):
 
 @app.post("/api/agents/{profile_name}/start")
 async def start_agent(profile_name: str):
+    is_main = profile_name == "__main__"
     profiles = discovery.list_profiles()
-    if profile_name not in profiles:
+    profile_names = {p["name"] for p in profiles}
+    if profile_name not in profile_names:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
-    result = control.start(profile_name)
+    result = control.start(profile_name, is_main)
     return JSONResponse(result)
 
 
 @app.post("/api/agents/{profile_name}/stop")
 async def stop_agent(profile_name: str):
+    is_main = profile_name == "__main__"
     profiles = discovery.list_profiles()
-    if profile_name not in profiles:
+    profile_names = {p["name"] for p in profiles}
+    if profile_name not in profile_names:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
-    result = control.stop(profile_name)
+    result = control.stop(profile_name, is_main)
     return JSONResponse(result)
 
 
 @app.post("/api/agents/{profile_name}/restart")
 async def restart_agent(profile_name: str):
+    is_main = profile_name == "__main__"
     profiles = discovery.list_profiles()
-    if profile_name not in profiles:
+    profile_names = {p["name"] for p in profiles}
+    if profile_name not in profile_names:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
-    result = control.restart(profile_name)
+    result = control.restart(profile_name, is_main)
     return JSONResponse(result)
 
 
 @app.post("/api/agents/{profile_name}/open-terminal")
 async def open_terminal(profile_name: str):
+    is_main = profile_name == "__main__"
     profiles = discovery.list_profiles()
-    if profile_name not in profiles:
+    profile_names = {p["name"] for p in profiles}
+    if profile_name not in profile_names:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
-    result = control.open_terminal(profile_name)
+    result = control.open_terminal(profile_name, is_main)
     return JSONResponse(result)
 
 
@@ -88,26 +102,30 @@ async def open_terminal(profile_name: str):
 
 @app.get("/api/logs/{profile_name}/recent")
 async def get_recent_logs(profile_name: str, log_type: str = "gateway.log"):
+    is_main = profile_name == "__main__"
     profiles = discovery.list_profiles()
-    if profile_name not in profiles:
+    profile_names = {p["name"] for p in profiles}
+    if profile_name not in profile_names:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
     if log_type not in VALID_LOG_TYPES:
         return JSONResponse({"error": "Invalid log type"}, status_code=400)
-    lines = log_streamer.get_recent_lines(profile_name, log_type)
+    lines = log_streamer.get_recent_lines(profile_name, log_type, is_main=is_main)
     return JSONResponse({"lines": lines})
 
 
 @app.get("/api/logs/{profile_name}/stream")
 async def stream_logs(profile_name: str, log_type: str = "gateway.log"):
     """SSE endpoint for live log streaming."""
+    is_main = profile_name == "__main__"
     profiles = discovery.list_profiles()
-    if profile_name not in profiles:
+    profile_names = {p["name"] for p in profiles}
+    if profile_name not in profile_names:
         return JSONResponse({"error": "Profile not found"}, status_code=404)
     if log_type not in VALID_LOG_TYPES:
         return JSONResponse({"error": "Invalid log type"}, status_code=400)
 
     return StreamingResponse(
-        log_streamer.stream_new_lines(profile_name, log_type),
+        log_streamer.stream_new_lines(profile_name, log_type, is_main=is_main),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

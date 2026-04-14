@@ -6,55 +6,92 @@ import subprocess
 import time
 from pathlib import Path
 
+from .profile_discovery import HERMES_DIR
+
 
 class ProcessControl:
-    """Start/stop/restart Hermes agents via CLI — never writes to .hermes/."""
+    """Start/stop/restart Hermes agents via CLI."""
 
-    def start(self, profile_name: str) -> dict:
+    def _resolve_dir(self, profile_name: str, is_main: bool = False) -> Path:
+        if is_main or profile_name == "__main__":
+            return HERMES_DIR
+        return Path.home() / ".hermes" / "profiles" / profile_name
+
+    def start(self, profile_name: str, is_main: bool = False) -> dict:
         """Start agent gateway as detached process."""
         try:
+            if is_main or profile_name == "__main__":
+                cmd = ["hermes", "gateway", "run"]
+            else:
+                cmd = ["hermes", "-p", profile_name, "gateway", "run"]
             subprocess.Popen(
-                ["hermes", "-p", profile_name, "gateway", "run"],
+                cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
-            return {"success": True, "message": f"Started {profile_name}"}
+            label = profile_name if not is_main else "main"
+            return {"success": True, "message": f"Started {label}"}
         except Exception as e:
             return {"success": False, "message": str(e)}
 
-    def stop(self, profile_name: str) -> dict:
+    def stop(self, profile_name: str, is_main: bool = False) -> dict:
         """Send SIGTERM to gateway process."""
-        pid_file = Path.home() / ".hermes" / "profiles" / profile_name / "gateway.pid"
+        profile_dir = self._resolve_dir(profile_name, is_main)
+        label = profile_name if not is_main else "main"
+
+        # Try profile gateway.pid first (sub-agents)
+        pid_file = profile_dir / "gateway.pid"
+        pid = None
+
+        if pid_file.exists():
+            try:
+                with open(pid_file) as f:
+                    data = json.load(f)
+                pid = data.get("pid")
+            except Exception:
+                pass
+
+        # Fallback: read gateway_state.json (main agent & profiles without gateway.pid)
+        if not pid:
+            state_file = profile_dir / "gateway_state.json"
+            if state_file.exists():
+                try:
+                    with open(state_file) as f:
+                        state = json.load(f)
+                    pid = state.get("pid")
+                except Exception:
+                    pass
+
+        if not pid:
+            return {"success": False, "message": "No PID found"}
+
         try:
-            with open(pid_file) as f:
-                data = json.load(f)
-            pid = data.get("pid")
-            if not pid:
-                return {"success": False, "message": "No PID found"}
             os.kill(pid, signal.SIGTERM)
-            # Wait up to 10s for process to exit
             for _ in range(20):
                 time.sleep(0.5)
                 try:
                     os.kill(pid, 0)
                 except (OSError, ProcessLookupError):
-                    return {"success": True, "message": f"Stopped {profile_name}"}
+                    return {"success": True, "message": f"Stopped {label}"}
             return {"success": False, "message": "Process did not stop in time"}
         except ProcessLookupError:
             return {"success": True, "message": "Process already stopped"}
         except Exception as e:
             return {"success": False, "message": str(e)}
 
-    def restart(self, profile_name: str) -> dict:
+    def restart(self, profile_name: str, is_main: bool = False) -> dict:
         """Stop then start."""
-        self.stop(profile_name)
+        self.stop(profile_name, is_main)
         time.sleep(1)
-        return self.start(profile_name)
+        return self.start(profile_name, is_main)
 
-    def open_terminal(self, profile_name: str) -> dict:
+    def open_terminal(self, profile_name: str, is_main: bool = False) -> dict:
         """Open a new system terminal running the agent."""
-        cmd = f"hermes -p {profile_name} gateway run"
+        if is_main or profile_name == "__main__":
+            cmd = "hermes gateway run"
+        else:
+            cmd = f"hermes -p {profile_name} gateway run"
         terminals = [
             ["gnome-terminal", "--", "bash", "-c", cmd],
             ["konsole", "-e", "bash", "-c", cmd],
@@ -65,7 +102,8 @@ class ProcessControl:
             if shutil.which(term[0]):
                 try:
                     subprocess.Popen(term)
-                    return {"success": True, "message": f"Opened terminal for {profile_name}"}
+                    label = profile_name if not is_main else "main"
+                    return {"success": True, "message": f"Opened terminal for {label}"}
                 except Exception as e:
                     return {"success": False, "message": str(e)}
         return {"success": False, "message": "No supported terminal emulator found"}

@@ -2,25 +2,40 @@ import json
 import os
 from pathlib import Path
 
+from .profile_discovery import HERMES_DIR
+
 
 class StatusChecker:
     """Reads gateway_state.json and verifies process is alive."""
 
-    def __init__(self, profiles_dir: Path):
+    def __init__(self, hermes_dir: Path, profiles_dir: Path):
+        self._hermes_dir = hermes_dir
         self._profiles_dir = profiles_dir
 
-    def get_status(self, profile_name: str) -> dict:
-        """Return status dict for a single profile."""
-        profile_dir = self._profiles_dir / profile_name
+    def _resolve_dir(self, profile_name: str, is_main: bool = False) -> Path:
+        """Resolve directory for a profile or the main agent."""
+        if is_main or profile_name == "__main__":
+            return self._hermes_dir
+        return self._profiles_dir / profile_name
+
+    def get_status(self, profile: dict) -> dict:
+        """Return status dict for a profile dict with {name, is_main}."""
+        name = profile["name"]
+        is_main = profile.get("is_main", False)
+        profile_dir = self._resolve_dir(name, is_main)
+
         state_file = profile_dir / "gateway_state.json"
         config_file = profile_dir / "config.yaml"
 
-        # Read config.yaml for model info (simple parse, no pyyaml needed)
+        # Read config.yaml for model info
         model = "unknown"
         if config_file.exists():
             for line in config_file.read_text().splitlines():
-                if line.startswith("  default:"):
-                    model = line.split(":", 1)[1].strip()
+                stripped = line.strip()
+                # Main agent: "default: deepseek-chat" (top-level)
+                # Profile: "  default: qwen3.5-plus" (indented under model:)
+                if stripped.startswith("default:") and ":" in stripped:
+                    model = stripped.split(":", 1)[1].strip()
                     break
 
         # Try to read gateway state
@@ -44,22 +59,24 @@ class StatusChecker:
             feishu_connected = platforms.get("feishu", {}).get("state") == "connected"
 
             return {
-                "name": profile_name,
+                "name": name if not is_main else "main",
                 "pid": pid,
                 "model": model,
                 "running": process_alive,
                 "state": gateway_state if process_alive else "stopped",
                 "feishu_connected": feishu_connected,
                 "active_agents": active_agents,
+                "is_main": is_main,
             }
 
-        # No state file — profile exists but never started
+        # No state file
         return {
-            "name": profile_name,
+            "name": name if not is_main else "main",
             "pid": None,
             "model": model,
             "running": False,
             "state": "stopped",
             "feishu_connected": False,
             "active_agents": 0,
+            "is_main": is_main,
         }

@@ -1,6 +1,11 @@
-<div class="agent-card" onclick="selectAgent('{{ agent.name }}', event)">
+<div class="agent-card{% if agent.is_main %} agent-main{% endif %}" onclick="selectAgent('{{ agent.name }}', event)">
     <div class="agent-card-header">
-        <span class="agent-name">{{ agent.name }}</span>
+        <div class="agent-name-row">
+            {% if agent.is_main %}
+            <span class="main-badge">MAIN</span>
+            {% endif %}
+            <span class="agent-name">{{ agent.name }}</span>
+        </div>
         <span class="status-badge {% if agent.running %}status-running{% else %}status-stopped{% endif %}">
             {% if agent.running %}RUNNING{% else %}STOPPED{% endif %}
         </span>

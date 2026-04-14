@@ -5,9 +5,10 @@ A lightweight web operations panel for managing multiple isolated [Hermes](https
 ## Features
 
 - **Real-time monitoring** — live status (running/stopped), PID, model info, and active agent count for each profile
+- **Main agent support** — the root `~/.hermes/` agent is auto-detected and displayed with a "MAIN" badge
 - **Process control** — start, stop, restart agents or open a system terminal per profile
 - **Live log streaming** — Server-Sent Events (SSE) based real-time log viewer with tab switching between log types
-- **Auto-discovery** — scans `~/.hermes/profiles/` on each poll, no config needed for new profiles
+- **Auto-discovery** — scans `~/.hermes/` (main agent) and `~/.hermes/profiles/` (sub-agents) on each poll
 - **Zero external dependencies** — pure CSS + vanilla JS, no CDN, no build step
 - **Dark ops-panel theme** — adaptive large-screen layout with responsive breakpoints (1920px / 2560px)
 

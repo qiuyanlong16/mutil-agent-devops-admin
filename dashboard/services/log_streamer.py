@@ -1,29 +1,39 @@
 import time
 from pathlib import Path
 
+from .profile_discovery import HERMES_DIR
+
 VALID_LOG_TYPES = ["gateway.log", "agent.log", "errors.log"]
 
 
 class LogStreamer:
     """Read recent log lines and stream new lines via SSE."""
 
-    def __init__(self, profiles_dir: Path):
+    def __init__(self, hermes_dir: Path, profiles_dir: Path):
+        self._hermes_dir = hermes_dir
         self._profiles_dir = profiles_dir
         self._file_positions: dict[str, int] = {}
 
-    def get_recent_lines(self, profile_name: str, log_type: str, n_lines: int = 100) -> str:
+    def _resolve_dir(self, profile_name: str, is_main: bool = False) -> Path:
+        if is_main or profile_name == "__main__":
+            return self._hermes_dir
+        return self._profiles_dir / profile_name
+
+    def get_recent_lines(self, profile_name: str, log_type: str, n_lines: int = 100, is_main: bool = False) -> str:
         """Return last N lines from the log file."""
-        log_file = self._profiles_dir / profile_name / "logs" / log_type
+        profile_dir = self._resolve_dir(profile_name, is_main)
+        log_file = profile_dir / "logs" / log_type
         if not log_file.exists():
             return ""
         text = log_file.read_text(errors="replace")
         lines = text.splitlines()
         return "\n".join(lines[-n_lines:]) if lines else ""
 
-    def stream_new_lines(self, profile_name: str, log_type: str):
+    def stream_new_lines(self, profile_name: str, log_type: str, is_main: bool = False):
         """Generator that yields new log lines as SSE messages."""
         key = f"{profile_name}:{log_type}"
-        log_file = self._profiles_dir / profile_name / "logs" / log_type
+        profile_dir = self._resolve_dir(profile_name, is_main)
+        log_file = profile_dir / "logs" / log_type
 
         if not log_file.exists():
             yield f"event: error\ndata: Log file not found: {log_type}\n\n"
@@ -36,7 +46,6 @@ class LogStreamer:
         try:
             with open(log_file) as f:
                 while True:
-                    # Check if file was truncated/rotated
                     try:
                         current_size = log_file.stat().st_size
                     except FileNotFoundError:

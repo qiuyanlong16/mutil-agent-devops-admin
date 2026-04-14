@@ -285,6 +285,46 @@ body {
     box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(59, 130, 246, 0.15);
 }
 
+/* Main agent card — gold accent */
+.agent-main {
+    border-color: #92400e;
+    background: linear-gradient(135deg, #141c32 0%, #1a1a2e 100%);
+}
+
+.agent-main:hover {
+    border-color: #b45309;
+    background: linear-gradient(135deg, #1a2540 0%, #1e1e3a 100%);
+}
+
+.agent-main.selected {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px #f59e0b, 0 4px 16px rgba(245, 158, 11, 0.15);
+}
+
+/* Name row with optional badge */
+.agent-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.main-badge {
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fbbf24;
+    background-color: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 3px;
+    animation: badge-glow 3s ease-in-out infinite;
+}
+
+@keyframes badge-glow {
+    0%, 100% { border-color: rgba(245, 158, 11, 0.3); }
+    50% { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 6px rgba(245, 158, 11, 0.2); }
+}
+
 .agent-card-header {
     display: flex;
     align-items: center;
