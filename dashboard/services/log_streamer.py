@@ -15,7 +15,7 @@ class LogStreamer:
         self._file_positions: dict[str, int] = {}
 
     def _resolve_dir(self, profile_name: str, is_main: bool = False) -> Path:
-        if is_main or profile_name == "__main__":
+        if is_main or profile_name in ("__main__", "main"):
             return self._hermes_dir
         return self._profiles_dir / profile_name
 
