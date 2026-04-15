@@ -32,10 +32,10 @@ def _get_agents():
 
 def _resolve_profile(profile_name: str):
     """Return (is_main, found) tuple for a profile name."""
-    is_main = profile_name == "__main__"
+    is_main = profile_name in ("__main__", "main")
     profiles = discovery.list_profiles()
     profile_names = {p["name"] for p in profiles}
-    return is_main, profile_name in profile_names
+    return is_main, is_main or profile_name in profile_names
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────
